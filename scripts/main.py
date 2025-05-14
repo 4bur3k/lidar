@@ -8,6 +8,7 @@ import matplotlib.animation as animation
 import numpy as np
 
 import pandas as pd
+from datetime import datetime
 RMAX = 32.0
 
 class Lidar:
@@ -41,12 +42,16 @@ class Lidar:
         self.laser.setlidaropt(ydlidar.LidarPropIntenstiy, False);
 
         self.scan = ydlidar.LaserScan()
+        
+        self.df = pd.DataFrame(columns = {'time', 'angle', 'range', 'intens'})
 
-    def save_points(self, angle, range, intens):
-        df = pd.DataFrame(columns = {'time', 'angle', 'range', 'intens'})
+    def add_points(self, angles, ranges, intenses):
+        curr_time_arr = [datetime.now()] * len(angles)
+        self.df = pd.concat([self.df, pd.DataFrame([curr_time_arr, angles, ranges, intenses])], ignore_index=True)
 
-        df = 
-
+    def save_points(self):
+        self.df.to_csv('data/data.csv')
+        
     def _animate(self, num):
         r = self.laser.doProcessSimple(self.scan);
         if r:
@@ -60,6 +65,7 @@ class Lidar:
                 print(point.angle, point.range, point.intensity, sep=' | ')
             self.lidar_polar.clear()
             self.lidar_polar.scatter(angle, ran, c=intensity, cmap='hsv', alpha=0.95)
+            self.add_points(angle, ran, intensity)
 
     def draw_points(self):
         ret = self.laser.initialize();
@@ -68,6 +74,7 @@ class Lidar:
             if ret:
                 ani = animation.FuncAnimation(self.fig, self._animate, interval=50)
                 plt.show()
+            self.save_points()
             self.laser.turnOff();
         self.laser.disconnecting();
         plt.close();
