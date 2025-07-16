@@ -14,6 +14,9 @@ import math
 import cv2
 from PIL import Image, ImageDraw
 
+from mavlink import MavlinkController
+
+
 class CollisionProtection:
 
     def __init__(self):
@@ -40,6 +43,9 @@ class CollisionProtection:
         self.scan = ydlidar.LaserScan()
         
         self.df = pd.DataFrame(columns = ['time', 'angle', 'range', 'intens'])
+        
+        self.mavlink = MavlinkController()
+
 
         
     def turn_on(self, min_dist):
@@ -59,13 +65,17 @@ class CollisionProtection:
                     angle_range_arr = []
                     for point in self.scan.points:
                         angle_range_arr.append([point.angle, point.range])
-                        if point.range < min_dist:
-                            print('PIZDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
+
+                        if point.range < min_dist and point.range > 0:
+                            self.mavlink.stop_drone()
+                            break
+                            # print('PIZDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
                         elif point.range < min_ran:
                             min_ran = point.range
                             min_angle = point.angle 
-                                          
-                print('****', len([]), '\n\n')
+                    # print('***', len(angle_range_arr))
+                    # self.mavlink.get_curr_mode()                
+                # print('****', len([]), '\n\n')
 
 
    
@@ -92,5 +102,5 @@ class CollisionProtection:
 
 lidar = CollisionProtection()
 
-lidar.turn_on()
+lidar.turn_on(2)
 
