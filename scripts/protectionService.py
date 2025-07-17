@@ -82,12 +82,7 @@ class CollisionProtection:
                             angle_range_arr.append([point.angle, point.range])
                             angles.append(point.angle)
                             ranges.append(point.range)
-                        # if point.range < min_dist and point.range > 0:
-                        #     self.mavlink.stop_drone()
-                        #     break
-                        # elif point.range < min_ran:
-                        #     min_ran = point.range
-                        #     min_angle = point.angle 
+                       
                     inter_angles, inter_ranges = self.interpolate(angles, ranges)             
                     
 
