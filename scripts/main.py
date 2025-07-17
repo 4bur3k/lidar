@@ -123,7 +123,7 @@ class Scan:
     def __init__(self):
         pass
 
-class Lidar:
+class Lidar_new:
 
     def __init__(self):
 
@@ -190,7 +190,24 @@ class Lidar:
 
     def save_points(self):
         self.df.to_csv('data/data.csv')
-        
+    
+    def interpolate(self, angles, ranges, resolution = 1.0, max_range=10.0):
+        angles, ranges = np.array(angles), np.array(ranges)
+        sorted_indices = np.argsort(angles)
+        angles_sorted = angles[sorted_indices]
+        ranges_sorted = ranges[sorted_indices]
+
+        target_angles = np.arange(0, 360, resolution)
+        interpolated = np.interp(
+            target_angles,
+            angles_sorted,
+            ranges_sorted,
+            left=max_range,
+            right=max_range
+        )
+        return interpolated
+
+
     def _animate(self, num):
         r = self.laser.doProcessSimple(self.scan);
         if r:
@@ -205,13 +222,13 @@ class Lidar:
             self.lidar_polar.clear()
             self.lidar_polar.scatter(angle, ran, c=intensity, cmap='hsv', alpha=0.95)
 
-            y_up_range, x_right_range, y_down_range, x_left_range = self.get_ranges(angle, ran)
-            x_ok, y_ok, x_diff, y_diff = self.position.update_pos(x_right_range, x_left_range, y_up_range, y_down_range)
+            # y_up_range, x_right_range, y_down_range, x_left_range = self.get_ranges(angle, ran)
+            # x_ok, y_ok, x_diff, y_diff = self.position.update_pos(x_right_range, x_left_range, y_up_range, y_down_range)
             
-            self.texts[0].set_text(f'Right: {x_diff:.2f}')
-            self.texts[1].set_text(f'Up: {y_diff:.2f}')
-            self.texts[2].set_text(f'x_ok: {x_ok}')
-            self.texts[3].set_text(f'y_ok: {y_ok}')
+            # self.texts[0].set_text(f'Right: {x_diff:.2f}')
+            # self.texts[1].set_text(f'Up: {y_diff:.2f}')
+            # self.texts[2].set_text(f'x_ok: {x_ok}')
+            # self.texts[3].set_text(f'y_ok: {y_ok}')
 
             self.add_points(angle, ran, intensity)
 
@@ -368,7 +385,93 @@ class Lidar:
     def get_distances(self):
         pass
 
+class Lidar:
+
+    def __init__(self):
+        self.fig = plt.figure()
+        self.fig.canvas.set_window_title('YDLidar LIDAR Monitor')
+
+        self.lidar_polar = plt.subplot(polar=True)
+        self.lidar_polar.autoscale_view(True,True,True)
+        self.lidar_polar.set_rmax(RMAX)
+        self.lidar_polar.grid(True)
+
+        ports = ydlidar.lidarPortList();
+        port = "/dev/ttyUSB0";
+        for key, value in ports.items():
+            port = value;
+            
+        self.laser = ydlidar.CYdLidar();
+        self.laser.setlidaropt(ydlidar.LidarPropSerialPort, port);
+        self.laser.setlidaropt(ydlidar.LidarPropSerialBaudrate, 115200);
+        self.laser.setlidaropt(ydlidar.LidarPropLidarType, ydlidar.TYPE_TRIANGLE);
+        self.laser.setlidaropt(ydlidar.LidarPropDeviceType, ydlidar.YDLIDAR_TYPE_SERIAL);
+        self.laser.setlidaropt(ydlidar.LidarPropScanFrequency, 10.0);
+        self.laser.setlidaropt(ydlidar.LidarPropSampleRate, 3);
+        self.laser.setlidaropt(ydlidar.LidarPropSingleChannel, True);
+        self.laser.setlidaropt(ydlidar.LidarPropMaxAngle, 180.0);
+        self.laser.setlidaropt(ydlidar.LidarPropMinAngle, -180.0);
+        self.laser.setlidaropt(ydlidar.LidarPropMaxRange, 16.0);
+        self.laser.setlidaropt(ydlidar.LidarPropMinRange, 0.08);
+        self.laser.setlidaropt(ydlidar.LidarPropIntenstiy, False);
+
+        self.scan = ydlidar.LaserScan()
+        
+        # self.df = pd.DataFrame(columns = {'time', 'angle', 'range', 'intens'})
+
+
+    
+    def interpolate(self, angles, ranges, resolution = 1.0, max_range=10.0):
+        angles, ranges = np.array(np.mod(angles, 2 * np.pi)), np.array(ranges)
+        sorted_indices = np.argsort(angles)
+        angles_sorted = angles[sorted_indices]
+        ranges_sorted = ranges[sorted_indices]
+
+        resolution_rad = np.deg2rad(resolution)
+        target_angles = np.arange(0, 2 * np.pi, resolution_rad)
+
+        interpolated_ranges = np.interp(
+            target_angles,
+            angles_sorted,
+            ranges_sorted,
+            left=max_range,
+            right=max_range
+        )
+        
+        return target_angles, interpolated_ranges
+
+    def _animate(self, num):
+        r = self.laser.doProcessSimple(self.scan);
+        if r:
+            angle = []
+            ran = []
+            intensity = []
+            for point in self.scan.points:
+                if point.range > 0.2:
+                    angle.append(point.angle);
+                    ran.append(point.range);
+                    intensity.append(point.intensity);
+            intensity = [1008.0] * 360
+            angle, ran = self.interpolate(angle, ran) 
+            
+            self.lidar_polar.clear()
+            self.lidar_polar.scatter(angle, ran, c=intensity, cmap='hsv', alpha=0.95)
+   
+
+    def draw_points(self):
+        ret = self.laser.initialize();
+        if ret:
+            ret = self.laser.turnOn();
+            if ret:
+                ani = animation.FuncAnimation(self.fig, self._animate, interval=50)
+                plt.show()
+            
+            self.laser.turnOff();
+        self.laser.disconnecting();
+        plt.close();
+
+
 lidar = Lidar()
 
-lidar.MCL()
+lidar.draw_points()
 

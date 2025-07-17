@@ -14,9 +14,6 @@ import math
 import cv2
 from PIL import Image, ImageDraw
 
-from mavlink import MavlinkController
-
-
 class CollisionProtection:
 
     def __init__(self):
@@ -43,12 +40,28 @@ class CollisionProtection:
         self.scan = ydlidar.LaserScan()
         
         self.df = pd.DataFrame(columns = ['time', 'angle', 'range', 'intens'])
-        
-        self.mavlink = MavlinkController()
+
+    def interpolate(self, angles, ranges, resolution = 1.0, max_range=10.0):
+        angles, ranges = np.array(np.mod(angles, 2 * np.pi)), np.array(ranges)
+        sorted_indices = np.argsort(angles)
+        angles_sorted = angles[sorted_indices]
+        ranges_sorted = ranges[sorted_indices]
+
+        resolution_rad = np.deg2rad(resolution)
+        target_angles = np.arange(0, 2 * np.pi, resolution_rad)
+
+        interpolated_ranges = np.interp(
+            target_angles,
+            angles_sorted,
+            ranges_sorted,
+            left=max_range,
+            right=max_range
+        )
+            
+        return target_angles, interpolated_ranges
 
 
-        
-    def turn_on(self, min_dist):
+    def turn_on(self, min_dist, range_min_thresh=0.2):
         '''
         Start checking collisions
         min_dist: minimal distance of stoping in meters
@@ -63,19 +76,20 @@ class CollisionProtection:
 
                 if r:
                     angle_range_arr = []
+                    angles, ranges = [], []
                     for point in self.scan.points:
-                        angle_range_arr.append([point.angle, point.range])
-
-                        if point.range < min_dist and point.range > 0:
-                            self.mavlink.stop_drone()
-                            break
-                            # print('PIZDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
-                        elif point.range < min_ran:
-                            min_ran = point.range
-                            min_angle = point.angle 
-                    # print('***', len(angle_range_arr))
-                    # self.mavlink.get_curr_mode()                
-                # print('****', len([]), '\n\n')
+                        if point.range > range_min_thresh:
+                            angle_range_arr.append([point.angle, point.range])
+                            angles.append(point.angle)
+                            ranges.append(point.range)
+                        # if point.range < min_dist and point.range > 0:
+                        #     self.mavlink.stop_drone()
+                        #     break
+                        # elif point.range < min_ran:
+                        #     min_ran = point.range
+                        #     min_angle = point.angle 
+                    inter_angles, inter_ranges = self.interpolate(angles, ranges)             
+                    
 
 
    
@@ -102,5 +116,5 @@ class CollisionProtection:
 
 lidar = CollisionProtection()
 
-lidar.turn_on(2)
+lidar.turn_on(10)
 
