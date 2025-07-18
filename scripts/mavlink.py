@@ -97,14 +97,14 @@ class MavlinkController:
                 0,
                 0, 0, 0)
 
-    def stop_drone(self):
+    def stop_drone(self, time_to_move, pitch, roll):
         try:
             # Get mode mappings
             mode_mapping = self.master.mode_mapping()
             if not mode_mapping:
                 raise Exception("Failed to get mode mapping from autopilot.")
 
-            self._move_drone(2, 1200)
+            self._move_drone(time_to_move, pitch, roll)
               
 
         except KeyboardInterrupt:
