@@ -4,7 +4,7 @@ import serial.tools.list_ports
 import numpy as np
 
 class MavlinkController:
-    def __init__(self, connection_string='/dev/ttyACM0', baudrate=57600):
+    def __init__(self, connection_string='/dev/ttyS0', baudrate=115200):
         print(f"\nConnecting to {connection_string}...")
 
         try:
@@ -18,6 +18,24 @@ class MavlinkController:
         self.master.wait_heartbeat()
         print("Heartbeat received. Connected to system %d, component %d" %
             (self.master.target_system, self.master.target_component))
+        
+        params_to_set = {
+        "AVOID_ENABLE": 7,
+        "AVOID_MARGIN": 2.0,
+        "AVOID_BEHAVE": 1
+        }
+        time.sleep(0.2)  # Подождём немного между запросами
+
+        for param_name, param_value in params_to_set.items():
+            print(f" Устанавливаем {param_name} = {param_value}")
+            self.master.mav.param_set_send(
+                self.master.target_system,
+                self.master.target_component,
+                param_name.encode('utf-8'),
+                float(param_value),
+                mavutil.mavlink.MAV_PARAM_TYPE_REAL32
+            )
+            time.sleep(0.2)  # Подождём немного между запросами
         
     def get_EKF_speed(self):
         msg = self.master.recv_match(type='LOCAL_POSITION_NED', blocking=True)
@@ -61,32 +79,28 @@ class MavlinkController:
         
         lidar_angle = self._angle_substraction_deg(direction, heading)
 
-    def _move_drone(self, time_to_move, pitch=0, roll=0, thrust=0):
+    def _move_drone(self, pitch=0, roll=0, thrust=0):
         '''
         from 1000 to 2000, where: 
         1001:1499 - back/left;
         1501:1999 - forward/right
         '''
-        for name, val in {'roll': roll, 'pitch': pitch, 'thrust': thrust}.items():
-            if not (1000 <= val <= 2000):
-                raise ValueError(f"{name} имеет недопустимое значение: {val}")
-            
-
+        # for name, val in {'roll': roll, 'pitch': pitch, 'thrust': thrust}.items():
+        #     if not (1000 <= val <= 2000):
+        #         raise ValueError(f"{name} имеет недопустимое значение: {val}")
+        
         self.master.mav.rc_channels_override_send(
                 self.master.target_system,
                 self.master.target_component,
                 thrust,
-                0,
-                pitch,
                 roll,
+                pitch,
+                0,
                 0,
                 0, 0, 0)
         
-        time.sleep(time_to_move)
-        
-        self._stop_drone()
 
-    def _stop_drone(self):
+    def _return_controll(self):
         self.master.mav.rc_channels_override_send(
                 self.master.target_system,
                 self.master.target_component,
@@ -97,18 +111,45 @@ class MavlinkController:
                 0,
                 0, 0, 0)
 
-    def stop_drone(self, time_to_move, pitch, roll):
+    def stop_drone(self, pitch, roll):
         try:
-            # Get mode mappings
-            mode_mapping = self.master.mode_mapping()
-            if not mode_mapping:
-                raise Exception("Failed to get mode mapping from autopilot.")
-
-            self._move_drone(time_to_move, pitch, roll)
-              
+            if pitch != 1500 or roll != 1500:
+                self._move_drone(pitch, roll)
+            else:
+                self._return_controll()
+        
 
         except KeyboardInterrupt:
             print("\nInterrupted by user. Exiting...")
         except Exception as e:
             print(f"Error: {e}")
 
+    def if_avoidence_enabled(self):
+        chan_7_value = 0
+        try:
+            chan_7_value = self.master.recv_match(type='RC_CHANNELS', blocking = True).chan7_raw
+        except BaseException as e:
+            print('Error:', e)
+            
+        if chan_7_value > 1200:
+            return True
+        else:
+            self._return_controll()
+            return False
+    
+    def send_distance_sensors(self, sensor_readigs, RATE=10):
+        
+        for orientation, dist in sensor_readigs:
+            print(orientation, dist)
+            self.master.mav.distance_sensor_send(
+                time_boot_ms = int(time.time() * 1000) & 0xFFFFFFFF,
+                min_distance = 10,     # минимальная дальность (см)
+                max_distance = 1000,   # максимальная дальность (см)
+                current_distance = int(dist),
+                type = 0,
+                id = 0,
+                orientation = orientation,
+                covariance = 0
+            )
+            
+        time.sleep(1.0/RATE)

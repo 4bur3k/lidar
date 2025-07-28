@@ -2,6 +2,10 @@ venv/
 pythonYD/
 YDLidar-SDK/
 .ipynb_checkpoints/
+mavlink_pri.py
+mavlonk_copy.py
+protection_service_copy.py
+protection_service_rpi.py
 
 data/*
 Untitled.ipynb
