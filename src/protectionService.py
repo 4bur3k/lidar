@@ -2,10 +2,12 @@ import os
 import ydlidar
 import time
 import sys
+
 from matplotlib.patches import Arc
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.gridspec import GridSpec
+
 import numpy as np
 import statistics
 
@@ -16,6 +18,15 @@ import cv2
 from PIL import Image, ImageDraw
 
 from mavlink import MavlinkController
+
+import yaml
+import logging
+
+logging.basicConfig(
+    filename='log/protectionlog.log', 
+    level=logging.INFO,      
+    format='%(asctime)s [%(levelname)s] %(message)s',
+)
 
 class OctoSector:
     def __init__(self):
@@ -135,13 +146,18 @@ class Octagone:
                 if min_dist < dangerous_distance:
                     # print('PIZDAAAAAA CLOSE:', min_dist)
                     sectors.append((attr_name, min_dist))
-
+                
+        if len(sectors) > 0:
+            logging.info(f'Dangerous sectors found: {sectors}')
+        
         return sectors
 
 
 class CollisionProtection:
 
     def __init__(self):
+        
+        logging.info('Connecting to lidar...')
         
         ports = ydlidar.lidarPortList();
         port = "/dev/ttyUSB0";
@@ -163,9 +179,15 @@ class CollisionProtection:
         self.laser.setlidaropt(ydlidar.LidarPropIntenstiy, False);
 
         self.scan = ydlidar.LaserScan()
+        logging.info('Connected succesfully')
 
         self.octagone = Octagone()
-        self.controller = MavlinkController()
+        
+        try:
+            self.controller = MavlinkController()
+            logging.info('Succesfully connected to mavlink')
+        except Exception as e:
+            logging.error('Failed to mavlink connection')
         
         self.df = pd.DataFrame(columns = ['time', 'angle', 'range', 'intens'])
 
@@ -287,7 +309,7 @@ class CollisionProtection:
                             angles.append(point.angle)
                             ranges.append(point.range)
                             
-                       
+                    
                     inter_angles, inter_ranges = self.interpolate(angles, ranges)             
                     # print(np.rad2deg(inter_angles))
 
@@ -297,6 +319,7 @@ class CollisionProtection:
                     roll, pitch = self.count_pwm_values(red_sectors, distance_to_stop)
                     print('PITCH ROLL:', pitch, roll)
                     if self.controller.if_avoidence_enabled():
+                        logging.info(f'Stopping drone with: PITCH {pitch} ROLL {roll}')
                         self.controller.stop_drone(pitch, roll)
                        
                    

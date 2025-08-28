@@ -1,6 +1,0 @@
-image: map0.pgm
-resolution: 0.05  # каждый пиксель = 5 см
-origin: [-10.0, -10.0, 0.0]  # смещение в метрах, в координатах карты
-negate: 0
-occupied_thresh: 0.65
-free_thresh: 0.196

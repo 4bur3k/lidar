@@ -2,21 +2,28 @@ from pymavlink import mavutil
 import time
 import serial.tools.list_ports
 import numpy as np
+import logging
+
+logging.basicConfig(
+    filename='log/mavlinklog.log', 
+    level=logging.INFO,      
+    format='%(asctime)s [%(levelname)s] %(message)s',
+)
 
 class MavlinkController:
     def __init__(self, connection_string='/dev/ttyS0', baudrate=115200):
-        print(f"\nConnecting to {connection_string}...")
+        logging.info(f'Connecting to {connection_string}...')
 
         try:
             self.master = mavutil.mavlink_connection(connection_string, baud=baudrate)
         except Exception as e:
-            print(f"Connection error: {e}")
+            logging.error(f"Connection error: {e}")
             return
 
         # Wait for heartbeat
-        print("Waiting for Heartbeat...")
+        logging.info(f'Waiting for Heartbeat...')
         self.master.wait_heartbeat()
-        print("Heartbeat received. Connected to system %d, component %d" %
+        logging.info("Heartbeat received. Connected to system %d, component %d" %
             (self.master.target_system, self.master.target_component))
         
         params_to_set = {
@@ -112,6 +119,7 @@ class MavlinkController:
                 0, 0, 0)
 
     def stop_drone(self, pitch, roll):
+        logging.info(f'Stopping drone: PITCH {pitch} ROLL {roll}')
         try:
             if pitch != 1500 or roll != 1500:
                 self._move_drone(pitch, roll)
