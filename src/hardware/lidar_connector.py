@@ -19,6 +19,7 @@ class LidarConnection:
     - specific_freq: float - freq lidar working (default for yd 10.0)
     
     # Example: 
+    ```
     lidar = LidarConnection()
     
     lidar.start()
@@ -31,6 +32,8 @@ class LidarConnection:
                 print(f"Got {len(points)} points")
     finally:
         lidar.stop()
+        
+    ```
     '''
     def __init__(self, specific_port=None, specific_freq=None):
         logging.info('Connecting to lidar...')
