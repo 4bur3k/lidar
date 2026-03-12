@@ -17,7 +17,7 @@ import math
 import cv2
 from PIL import Image, ImageDraw
 
-from mavlink import MavlinkController
+from hardware.mavlink import MavlinkController
 
 import yaml
 import logging
@@ -102,39 +102,6 @@ class Octagone:
                 min_dist = max_dist = median_dist = None
 
             getattr(self, name).set_distances(min_dist, max_dist, median_dist)
-            
-    # def set_sphere(self, ranges):
-    #     """
-    #     Обрабатывает lidar-массив (360°) и возвращает sensor_readings для distance_sensor_send().
-    #     Возвращает: список кортежей (orientation, distance_cm)
-    #     """
-
-    #     # Сопоставление направлений → индексы в lidar + orientation (MAVLink)
-    #     sectors = {
-    #         'w':  (ranges[68:113], 0),    # FORWARD
-    #         'sw': (ranges[23:68], 7),     # FORWARD_RIGHT
-    #         's':  (np.concatenate((ranges[338:], ranges[:22])), 1),  # RIGHT
-    #         'se': (ranges[293:338], 6),   # BACK_RIGHT (если надо)
-    #         'e':  (ranges[248:293], 2),   # BACK
-    #         'ne': (ranges[203:248], 5),   # BACK_LEFT
-    #         'n':  (ranges[158:203], 3),   # LEFT
-    #         'nw': (ranges[113:158], 4),   # FORWARD_LEFT
-    #     }
-
-    #     sensor_readings = []
-
-    #     for name, (data, orientation) in sectors.items():
-    #         # Фильтруем NaN, 0 и отрицательные
-    #         clean_data = data[np.isfinite(data) & (data > 0)]
-    #         if len(clean_data) == 0:
-    #             continue  # Пропускаем сектор, если данных нет
-
-    #         min_dist_m = np.min(clean_data)
-    #         min_dist_cm = int(min(12.0, max(0.2, min_dist_m)) * 100)  # clamp 20–1200 см
-
-    #         sensor_readings.append((orientation, min_dist_cm))
-
-    #     return sensor_readings
     
     def get_red_sectors(self, dangerous_distance=1.0):
         sectors = []
@@ -322,30 +289,7 @@ class CollisionProtection:
                         logging.info(f'Stopping drone with: PITCH {pitch} ROLL {roll}')
                         self.controller.stop_drone(pitch, roll)
                        
-                   
-   
-    # def check_collision(self, angle_range_arr, dist_thresh):
-    #     '''
-    #     Returns 
-    #     [True, angle, distance] if collision is close 
-    #     [False, angle, min distance] if no         
-    #     '''
-        
-    #     min_angle, min_ran = angle_range_arr[0]
-        
-    #     for angle, ran in angle_range_arr:
-    #         # If collision is close
-    #         if ran < dist_thresh:
-    #             return True, angle, ran
-            
-    #         if ran < min_ran:
-    #             min_angle, min_ran = angle, ran
-        
-    #     return False, min_angle, min_ran
-
-   
 
 lidar = CollisionProtection()
 
 lidar.turn_on(0.6)
-

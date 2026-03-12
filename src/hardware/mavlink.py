@@ -117,9 +117,35 @@ class MavlinkController:
                 0,
                 0,
                 0, 0, 0)
+        
+    def _transform_to_pwm(self, value:float):
+        """
+        value: от -1.0 до 1.0
+        1000 — полный назад/влево
+        1500 — нейтраль
+        2000 — полный вперёд/вправо
+        """
+        return int(1500 + value * 500)
 
     def stop_drone(self, pitch, roll):
         logging.info(f'Stopping drone: PITCH {pitch} ROLL {roll}')
+        try:
+            if pitch != 1500 or roll != 1500:
+                self._move_drone(pitch, roll)
+            else:
+                self._return_controll()
+        
+
+        except KeyboardInterrupt:
+            print("\nInterrupted by user. Exiting...")
+        except Exception as e:
+            print(f"Error: {e}")
+    
+    def move(self, dx, dy):
+        pitch = self._transform_to_pwm(dx)
+        roll  = self._transform_to_pwm(dy)
+        
+        logging.info(f'Moving drone drone: PITCH {pitch} ROLL {roll}')
         try:
             if pitch != 1500 or roll != 1500:
                 self._move_drone(pitch, roll)
