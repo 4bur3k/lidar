@@ -1,4 +1,4 @@
-''' Fly over all waypoints '''
+''' Fly over all waypoints from "./routes/route.csv"'''
 
 
 from hardware.lidar_connector import LidarConnection
