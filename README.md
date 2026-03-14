@@ -1,20 +1,214 @@
-# SDK for EVA project copter controll
+# Стек навигации робота 
 
-# How to run
-* Prepare env
-1. python3 -m venv venv - создание вируатльного окружения для питона
-2. source venv/bin/activate - активация венва
-3. https://github.com/YDLIDAR/YDLidar-SDK/blob/master/doc/howto/how_to_build_and_install.md - set up ydlidar
-4. pip install -r requirements.txt - установка зависимостей
-5. pip install catkin_pkg - без этого не работает лидар
-6. sudo chmod 666 /dev/ttyUSB0  - включение порта
+Python-инструментарий для управления роботами.
 
-* Start service
-1. python3 src/protectionService.py
+На данный момент проект содержит:
 
-# Tools
-1. YD SDK: https://github.com/YDLIDAR/YDLidar-SDK/tree/master
-  * API: https://github.com/YDLIDAR/YDLidar-SDK/blob/master/doc/YDLIDAR_SDK_API_for_Developers.md
-  
-  *  Protocol: https://github.com/YDLIDAR/YDLidar-SDK/blob/master/doc/YDLidar-SDK-Communication-Protocol.md
-  
+* интерфейс контроллера MAVLink
+* интеграцию LiDAR (планируется: Livox Mid-360)
+* базовый API для телеметрии и управления RC
+* передачу данных датчиков в MAVLink 
+
+Цель проекта — создать **простой стек робототехники** для навигации, обхода препятствий и автономного управления.
+
+---
+
+# Архитектура
+
+Типичный конвейер:
+
+```
+LiDAR (Livox Mid-360)
+        │
+        │ облако точек
+        ▼
+Обработка / обнаружение препятствий
+        │
+оценка расстояния
+        ▼
+MAVLink distance_sensor
+        │
+        ▼
+Контроллер полёта (PX4 / ArduPilot)
+```
+
+Контроллер MAVLink отвечает за:
+
+* получение телеметрии
+* управление через RC override
+* настройку параметров
+* передачу виртуальных датчиков расстояния
+
+---
+
+# Компоненты
+
+## Контроллер MAVLink
+
+Интерфейс MAVLink (для АРДУПИЛОТ и PX4) реализован с использованием **pymavlink**.
+
+Он предоставляет:
+
+* подключение к автопилоту MAVLink
+* чтение телеметрии
+* управление RC-каналами
+* управление параметрами
+* передачу данных датчиков расстояния
+
+Пример подключения:
+
+```python
+from mavlink_controller import MavlinkController
+
+controller = MavlinkController("/dev/ttyS0", 115200)
+controller.connect()
+```
+
+---
+
+## Управление RC
+
+RC override позволяет программно управлять аппаратом.
+
+Диапазон входных значений:
+
+```
+-1.0 ... 1.0
+```
+
+Внутри они преобразуются в PWM:
+
+```
+1000 – 2000 мкс
+```
+
+Пример:
+
+```python
+controller.send_rc(
+    roll=0.0,
+    pitch=0.0,
+    throttle=0.3,
+    yaw=0.0
+)
+```
+
+---
+
+## Передача датчика расстояния
+
+Информация о препятствиях может передаваться в автопилот как **виртуальный датчик расстояния**.
+
+Это полезно для систем обхода препятствий на основе LiDAR.
+
+Пример:
+
+```python
+controller.send_distance(
+    distance_cm=120,
+    orientation=0
+)
+```
+
+Параметр `orientation` соответствует перечислению MAVLink `MAV_SENSOR_ORIENTATION`.
+
+---
+
+# Планируемая интеграция LiDAR
+
+Проект разрабатывается с расчётом на использование **Livox Mid-360**.
+
+Поток данных:
+
+```
+Livox Mid-360
+     │
+ROS2 драйвер
+     │
+PointCloud2
+     │
+Python обработка
+     │
+оценка расстояния
+     │
+MAVLink distance_sensor
+```
+
+Используемый драйвер:
+
+* livox_ros_driver2
+
+Модуль LiDAR будет преобразовывать облако точек в расстояния до препятствий и передавать их в MAVLink-контроллер.
+
+---
+
+# Установка
+
+Зависимости:
+
+* Python 3.10+
+* NumPy
+* pymavlink
+
+Установка Python-пакетов:
+
+```bash
+pip install pymavlink numpy
+```
+
+---
+
+# Пример использования
+
+Минимальный пример:
+
+```python
+controller = MavlinkController("/dev/ttyS0", 115200)
+
+controller.connect()
+
+while True:
+
+    speed = controller.get_speed()
+    heading = controller.get_heading()
+
+    print("speed:", speed)
+    print("heading:", heading)
+```
+
+---
+
+# Логирование
+
+Логи записываются в файл:
+
+```
+log/lidar.log
+```
+
+Логируются:
+
+* статус подключения
+* доступ к телеметрии
+* RC-команды
+* передача данных датчиков
+
+---
+
+# Цели проекта
+
+Цель проекта — предоставить:
+
+* простой интерфейс MAVLink для робототехники
+* LiDAR-детекцию препятствий
+* модульные компоненты навигации
+* лёгкую Python-реализацию
+
+Планируемые будущие модули:
+
+* обработка LiDAR
+* обход препятствий
+* интеграция SLAM
+* автономная навигация
+
+Код является собственность компании ООО Юнидронс, кто захочет спиздить - того маму выебу и прокляну в веках.

@@ -3,6 +3,38 @@ import numpy as np
 import math
 import cv2
 
+class LocalisationInterface():
+    def __init__(self):
+        pass
+    
+    def get_current_postion(self, points) -> tuple[int, int]:
+        '''
+        Args:
+        points - list of points from lidar
+        Returns:
+        - xy 
+        '''
+        return (0, 0)
+    
+# <=== Functions declaration:  ===>
+def get_direction(curr_pos: tuple[int, int], target_pos: tuple[int, int]) -> tuple[float, float]:
+    '''
+    Returns normalized direction vector from *curr_pos* to *target* in xy format
+    '''
+    dx = target_pos[0] - curr_pos[0]
+    dy = target_pos[1] - curr_pos[1]
+    distance = math.sqrt(dx**2 + dy**2)
+    
+    if distance == 0:
+        return (0.0, 0.0)
+    
+    return (dx / distance, dy / distance)
+
+def get_distance(a: tuple[float, float], b: tuple[float, float]) -> float:
+    return math.sqrt((b[0] - a[0])**2 + (b[1] - a[1])**2)
+
+
+# <=== Classes declaration ===>
 class FingerprintLocalisator:
     def __init__(self):     
         pass
@@ -11,28 +43,25 @@ class FingerprintLocalisator:
     def match_scan_to_fingerprint():
         pass
 
-    def localise(self, angle, ran, gridmap):
-        '''
-        angle:
-        ran:
-        '''
+    # def localise(self, angle, ran, gridmap):
+    #     '''
+    #     angle:
+    #     ran:
+    #     '''
         
-        min_distance = float("inf")
-        best_match = None 
+    #     min_distance = float("inf")
+    #     best_match = None 
 
-        for position, reference_scan in fingerprint_db.items():
-            if len(reference_scan) != len(real_scan):
-                continue  # пропустить несовпадающие по размеру сканы
+    #     for position, reference_scan in fingerprint_db.items():
+    #         if len(reference_scan) != len(real_scan):
+    #             continue  # пропустить несовпадающие по размеру сканы
 
-            distance = np.linalg.norm(real_scan - reference_scan)
-            if distance < min_distance:
-                min_distance = distance
-                best_match = position
+    #         distance = np.linalg.norm(real_scan - reference_scan)
+    #         if distance < min_distance:
+    #             min_distance = distance
+    #             best_match = position
 
-        return best_match, min_distance
-
-
-
+    #     return best_match, min_distance
     
 
 class MonteCarloLocalization:
