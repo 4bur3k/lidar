@@ -1,3 +1,18 @@
+'''
+*
+*
+*
+*
+*
+!!!Attention!!!
+DEPRACATED | DEPRACATED | DEPRACATED | DEPRACATED | DEPRACATED | IN THIS VERSION
+*
+*
+*
+*
+*
+'''
+
 import os
 import ydlidar
 import time
